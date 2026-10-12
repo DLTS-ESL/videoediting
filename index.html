@@ -1,0 +1,852 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Video Studio</title>
+
+<style>
+:root {
+    --bg: #10131b;
+    --panel: #191e29;
+    --panel2: #222938;
+    --text: #f4f6fb;
+    --muted: #9ca8bb;
+    --blue: #6888ff;
+    --border: #30394a;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px Arial, sans-serif;
+}
+button, input, select, textarea { font: inherit; }
+button {
+    border: 0;
+    border-radius: 7px;
+    padding: 10px 13px;
+    cursor: pointer;
+    font-weight: 700;
+}
+button:disabled { opacity: .45; cursor: not-allowed; }
+.primary { background: var(--blue); color: white; }
+.secondary { background: var(--panel2); color: white; border: 1px solid var(--border); }
+header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.brand { font-size: 20px; font-weight: 800; }
+.brand span { color: #91a6ff; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 14px;
+    padding: 14px;
+    max-width: 1600px;
+    margin: auto;
+}
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    min-width: 0;
+}
+.panel-title {
+    font-weight: 800;
+    font-size: 15px;
+    margin-bottom: 12px;
+}
+#previewWrap {
+    position: relative;
+    background: #05070b;
+    border-radius: 8px;
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+#previewOverlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+#emptyPreview {
+    position: absolute;
+    text-align: center;
+    color: var(--muted);
+    line-height: 1.8;
+    padding: 20px;
+}
+#emptyPreview strong { display: block; font-size: 20px; color: white; }
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0;
+}
+#seek { width: 100%; }
+.time-label {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.section-label {
+    color: #a8b9ff;
+    font-weight: 800;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin: 18px 0 10px;
+}
+.trim-grid, .two-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.field { margin-bottom: 12px; min-width: 0; }
+.field label {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 7px;
+    color: #d6dceb;
+    font-size: 12px;
+}
+.field input[type="number"],
+.field input[type="text"],
+.field select,
+.field textarea {
+    width: 100%;
+    padding: 9px;
+    background: #10151f;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: white;
+}
+.field textarea { min-height: 75px; resize: vertical; }
+.field input[type="range"] { width: 100%; accent-color: var(--blue); }
+.field input[type="color"] {
+    width: 100%;
+    height: 35px;
+    background: transparent;
+    border: 0;
+}
+.upload-button {
+    display: block;
+    width: 100%;
+    background: var(--panel2);
+    color: white;
+    border: 1px dashed #56647c;
+    text-align: center;
+    margin-bottom: 10px;
+}
+input[type="file"] { display: none; }
+.note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+}
+#timelinePanel { margin-top: 14px; }
+.timeline-track {
+    background: #10151f;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 10px;
+    margin-top: 8px;
+}
+.track-label { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+.track-bar {
+    height: 24px;
+    border-radius: 4px;
+    background: linear-gradient(90deg,#465ab4,#718bff);
+}
+#status {
+    margin-top: 12px;
+    color: #b8c5ff;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+#progressOuter {
+    display: none;
+    height: 7px;
+    margin-top: 9px;
+    background: #090c12;
+    border-radius: 8px;
+    overflow: hidden;
+}
+#progress {
+    width: 0;
+    height: 100%;
+    background: #7e9aff;
+}
+#downloadLink {
+    display: none;
+    margin-top: 12px;
+    color: #b6c8ff;
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+.warning {
+    padding: 10px;
+    border-radius: 7px;
+    background: #332919;
+    color: #f5d6a1;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-top: 12px;
+}
+@media(max-width: 950px) {
+    #app { grid-template-columns: 1fr; }
+}
+@media(max-width: 500px) {
+    header { padding: 12px; }
+    #app { padding: 8px; }
+    .panel { padding: 10px; }
+    .brand { font-size: 17px; }
+}
+</style>
+</head>
+
+<body>
+<header>
+    <div class="brand">✦ AI <span>VIDEO STUDIO</span></div>
+    <div class="top-actions">
+        <button class="secondary" id="uploadBtn">＋ Import Video</button>
+        <button class="primary" id="exportBtn" disabled>Export MP4</button>
+    </div>
+</header>
+
+<input id="videoFile" type="file" accept="video/*">
+<input id="stickerFile" type="file" accept="image/png,image/*">
+
+<div id="app">
+    <main>
+        <section class="panel">
+            <div class="panel-title">Video Preview</div>
+            <div id="previewWrap">
+                <video id="video" playsinline></video>
+                <canvas id="previewOverlay"></canvas>
+                <div id="emptyPreview">
+                    <strong>Import a video to begin</strong>
+                    Your video stays in your browser.
+                </div>
+            </div>
+
+            <div class="preview-controls">
+                <button class="secondary" id="playBtn" disabled>▶ Play</button>
+                <input id="seek" type="range" min="0" max="100" value="0" disabled>
+                <span class="time-label" id="currentTime">00:00 / 00:00</span>
+            </div>
+
+            <div class="note">
+                Preview shows the color adjustments and overlays. Export renders
+                the trim, speed, crop, color adjustments, blur and overlays into an MP4.
+            </div>
+        </section>
+
+        <section class="panel" id="timelinePanel">
+            <div class="panel-title">Timeline</div>
+            <div class="timeline-track">
+                <div class="track-label">VIDEO CLIP</div>
+                <div class="track-bar"></div>
+            </div>
+            <div class="timeline-track">
+                <div class="track-label">TEXT / PNG OVERLAY</div>
+                <div class="note" id="overlayTrack">No overlay added</div>
+            </div>
+            <div class="timeline-track">
+                <div class="track-label">EXPORT RANGE</div>
+                <div class="note" id="rangeInfo">Import a video to see the duration.</div>
+            </div>
+        </section>
+
+        <section class="panel" style="margin-top:14px">
+            <div class="panel-title">Export Status</div>
+            <div class="note">
+                The first export may take a while because the video rendering engine
+                must download before it can run. Large videos use substantial memory.
+            </div>
+            <div id="status">Ready. Import a video to begin.</div>
+            <div id="progressOuter"><div id="progress"></div></div>
+            <a id="downloadLink" download="edited-video.mp4">Download edited MP4</a>
+        </section>
+    </main>
+
+    <aside class="panel">
+        <div class="panel-title">Editing Controls</div>
+
+        <div class="section-label">1. Trim & Speed</div>
+        <div class="trim-grid">
+            <div class="field">
+                <label for="trimStart">Start (seconds)</label>
+                <input id="trimStart" type="number" min="0" step="0.1" value="0">
+            </div>
+            <div class="field">
+                <label for="trimEnd">End (seconds)</label>
+                <input id="trimEnd" type="number" min="0" step="0.1" value="0">
+            </div>
+        </div>
+        <div class="field">
+            <label for="speed">Playback speed <span id="speedValue">1×</span></label>
+            <select id="speed">
+                <option value="0.25">0.25× — very slow</option>
+                <option value="0.5">0.5× — slow</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1× — normal</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2× — fast</option>
+            </select>
+        </div>
+
+        <div class="section-label">2. Color & Effects</div>
+        <div class="field">
+            <label for="brightness">Brightness <span id="brightnessValue">0</span></label>
+            <input id="brightness" type="range" min="-0.5" max="0.5" step="0.01" value="0">
+        </div>
+        <div class="field">
+            <label for="contrast">Contrast <span id="contrastValue">1</span></label>
+            <input id="contrast" type="range" min="0.5" max="2" step="0.05" value="1">
+        </div>
+        <div class="field">
+            <label for="saturation">Saturation <span id="saturationValue">1</span></label>
+            <input id="saturation" type="range" min="0" max="2" step="0.05" value="1">
+        </div>
+        <div class="field">
+            <label for="blur">Blur <span id="blurValue">0</span></label>
+            <input id="blur" type="range" min="0" max="10" step="1" value="0">
+        </div>
+        <div class="field">
+            <label for="crop">Crop edges <span id="cropValue">0%</span></label>
+            <input id="crop" type="range" min="0" max="20" step="1" value="0">
+            <div class="note">Crops the same percentage from all four edges.</div>
+        </div>
+
+        <div class="section-label">3. Add Text</div>
+        <div class="field">
+            <label for="overlayText">Text overlay</label>
+            <textarea id="overlayText" placeholder="Type a title or caption..."></textarea>
+        </div>
+        <div class="two-cols">
+            <div class="field">
+                <label for="fontSize">Font size (px)</label>
+                <input id="fontSize" type="number" min="12" max="160" value="48">
+            </div>
+            <div class="field">
+                <label for="fontColor">Text color</label>
+                <input id="fontColor" type="color" value="#ffffff">
+            </div>
+        </div>
+        <div class="field">
+            <label for="textPosition">Text position</label>
+            <select id="textPosition">
+                <option value="top">Top</option>
+                <option value="middle">Middle</option>
+                <option value="bottom" selected>Bottom</option>
+            </select>
+        </div>
+
+        <div class="section-label">4. Add PNG Sticker / Image</div>
+        <button class="upload-button" id="stickerBtn">＋ Upload PNG or Image</button>
+        <div class="field">
+            <label for="stickerSize">Sticker size <span id="stickerSizeValue">20%</span></label>
+            <input id="stickerSize" type="range" min="5" max="60" value="20">
+        </div>
+        <div class="field">
+            <label for="stickerPosition">Sticker position</label>
+            <select id="stickerPosition">
+                <option value="top-left">Top left</option>
+                <option value="top-right">Top right</option>
+                <option value="center">Center</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="bottom-right" selected>Bottom right</option>
+            </select>
+        </div>
+        <button class="secondary" id="removeSticker" style="width:100%">Remove Sticker</button>
+
+        <div class="warning">
+            Stage 1 note: automatic AI subtitles, subtitle timing, audio-track mixing,
+            green-screen replacement and multi-clip editing are planned for later stages.
+            This version exports the edits listed above.
+        </div>
+    </aside>
+</div>
+
+<script type="module">
+import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
+import { fetchFile, toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
+
+const $ = id => document.getElementById(id);
+const video = $("video");
+const canvas = $("previewOverlay");
+const ctx = canvas.getContext("2d");
+
+let sourceFile = null;
+let sourceURL = null;
+let stickerURL = null;
+let stickerImage = null;
+let ffmpeg = null;
+let ffmpegReady = false;
+let exporting = false;
+let lastExportURL = null;
+
+const settings = [
+    ["brightness", "brightnessValue", v => Number(v).toFixed(2)],
+    ["contrast", "contrastValue", v => Number(v).toFixed(2)],
+    ["saturation", "saturationValue", v => Number(v).toFixed(2)],
+    ["blur", "blurValue", v => v],
+    ["crop", "cropValue", v => v + "%"],
+    ["speed", "speedValue", v => v + "×"],
+    ["stickerSize", "stickerSizeValue", v => v + "%"]
+];
+
+function setStatus(message) {
+    $("status").textContent = message;
+}
+
+function fmt(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+
+function updateRangeInfo() {
+    const start = Number($("trimStart").value || 0);
+    const end = Number($("trimEnd").value || video.duration || 0);
+    const speed = Number($("speed").value);
+    const duration = Math.max(0, end - start);
+
+    $("rangeInfo").textContent =
+        `${fmt(start)} to ${fmt(end)} · ${fmt(duration / speed)} estimated output duration`;
+}
+
+function syncSettings() {
+    for (const [inputId, outputId, formatter] of settings) {
+        $(outputId).textContent = formatter($(inputId).value);
+    }
+    updateRangeInfo();
+    drawPreviewOverlay();
+    updateVideoFilters();
+}
+
+function updateVideoFilters() {
+    const brightness = Number($("brightness").value);
+    const contrast = Number($("contrast").value);
+    const saturation = Number($("saturation").value);
+    const blur = Number($("blur").value);
+    const crop = Number($("crop").value);
+
+    video.style.filter =
+        `brightness(${1 + brightness}) contrast(${contrast}) saturate(${saturation}) blur(${blur / 2}px)`;
+
+    // Crop is applied by the actual export filter.
+    // Keep the preview image scaled inside the preview monitor.
+    video.style.clipPath = crop > 0
+        ? `inset(${crop}% ${crop}% ${crop}% ${crop}%)`
+        : "none";
+}
+
+function drawPreviewOverlay() {
+    const rect = video.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    canvas.style.width = rect.width + "px";
+    canvas.style.height = rect.height + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    const text = $("overlayText").value;
+    const fontSize = Math.max(12, Number($("fontSize").value) || 48);
+    const color = $("fontColor").value;
+
+    if (text.trim()) {
+        ctx.font = `bold ${fontSize * rect.width / Math.max(video.videoWidth, 1)}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const lines = text.split("\n");
+        const lineHeight = fontSize * rect.width / Math.max(video.videoWidth, 1) * 1.2;
+        let y;
+
+        if ($("textPosition").value === "top") {
+            y = lineHeight;
+        } else if ($("textPosition").value === "middle") {
+            y = rect.height / 2 - (lines.length - 1) * lineHeight / 2;
+        } else {
+            y = rect.height - lineHeight * lines.length;
+        }
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0,0,0,.8)";
+        ctx.fillStyle = color;
+
+        lines.forEach((line, index) => {
+            const yy = y + index * lineHeight;
+            ctx.strokeText(line, rect.width / 2, yy);
+            ctx.fillText(line, rect.width / 2, yy);
+        });
+    }
+
+    if (stickerImage && stickerImage.complete) {
+        const width = rect.width * Number($("stickerSize").value) / 100;
+        const height = width * stickerImage.naturalHeight / stickerImage.naturalWidth;
+        const pos = $("stickerPosition").value;
+        let x = rect.width - width - 15;
+        let y = rect.height - height - 15;
+
+        if (pos === "top-left") { x = 15; y = 15; }
+        if (pos === "top-right") { x = rect.width - width - 15; y = 15; }
+        if (pos === "center") { x = (rect.width - width) / 2; y = (rect.height - height) / 2; }
+        if (pos === "bottom-left") { x = 15; y = rect.height - height - 15; }
+
+        ctx.drawImage(stickerImage, x, y, width, height);
+    }
+}
+
+function updateTimeline() {
+    $("currentTime").textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
+    if (video.duration) {
+        $("seek").value = video.currentTime / video.duration * 100;
+    }
+}
+
+$("uploadBtn").addEventListener("click", () => $("videoFile").click());
+
+$("videoFile").addEventListener("change", event => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (sourceURL) URL.revokeObjectURL(sourceURL);
+    sourceFile = file;
+    sourceURL = URL.createObjectURL(file);
+    video.src = sourceURL;
+    video.load();
+
+    $("emptyPreview").style.display = "none";
+    $("exportBtn").disabled = false;
+    $("downloadLink").style.display = "none";
+    setStatus(`Loaded: ${file.name}`);
+});
+
+video.addEventListener("loadedmetadata", () => {
+    $("trimStart").value = 0;
+    $("trimEnd").value = video.duration.toFixed(2);
+    $("seek").disabled = false;
+    $("playBtn").disabled = false;
+    updateTimeline();
+    syncSettings();
+});
+
+video.addEventListener("timeupdate", updateTimeline);
+video.addEventListener("resize", drawPreviewOverlay);
+window.addEventListener("resize", drawPreviewOverlay);
+
+$("playBtn").addEventListener("click", async () => {
+    if (video.paused) {
+        try {
+            video.playbackRate = Number($("speed").value);
+            await video.play();
+            $("playBtn").textContent = "❚❚ Pause";
+        } catch (error) {
+            setStatus("Could not play video: " + error.message);
+        }
+    } else {
+        video.pause();
+        $("playBtn").textContent = "▶ Play";
+    }
+});
+
+video.addEventListener("pause", () => $("playBtn").textContent = "▶ Play");
+video.addEventListener("play", () => $("playBtn").textContent = "❚❚ Pause");
+
+$("seek").addEventListener("input", () => {
+    if (video.duration) {
+        video.currentTime = video.duration * Number($("seek").value) / 100;
+    }
+});
+
+for (const id of [
+    "brightness", "contrast", "saturation", "blur", "crop", "speed",
+    "stickerSize", "fontSize", "fontColor", "textPosition",
+    "stickerPosition", "overlayText", "trimStart", "trimEnd"
+]) {
+    $(id).addEventListener("input", () => {
+        if (id === "speed") video.playbackRate = Number($("speed").value);
+        syncSettings();
+    });
+    $(id).addEventListener("change", syncSettings);
+}
+
+$("stickerBtn").addEventListener("click", () => $("stickerFile").click());
+
+$("stickerFile").addEventListener("change", event => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (stickerURL) URL.revokeObjectURL(stickerURL);
+    stickerURL = URL.createObjectURL(file);
+    stickerImage = new Image();
+
+    stickerImage.onload = () => {
+        $("overlayTrack").textContent = "Sticker image added";
+        drawPreviewOverlay();
+    };
+    stickerImage.src = stickerURL;
+});
+
+$("removeSticker").addEventListener("click", () => {
+    if (stickerURL) URL.revokeObjectURL(stickerURL);
+    stickerURL = null;
+    stickerImage = null;
+    $("stickerFile").value = "";
+    $("overlayTrack").textContent = $("overlayText").value.trim()
+        ? "Text overlay added"
+        : "No overlay added";
+    drawPreviewOverlay();
+});
+
+$("overlayText").addEventListener("input", () => {
+    $("overlayTrack").textContent =
+        $("overlayText").value.trim() || stickerImage
+        ? "Text / sticker overlay added"
+        : "No overlay added";
+});
+
+async function loadEngine() {
+    if (ffmpegReady) return;
+
+    setStatus("Loading video rendering engine. This may take a minute...");
+    ffmpeg = new FFmpeg();
+
+    ffmpeg.on("progress", ({ progress }) => {
+        const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
+        $("progressOuter").style.display = "block";
+        $("progress").style.width = pct + "%";
+        setStatus("Rendering MP4... " + pct + "%");
+    });
+
+    ffmpeg.on("log", ({ message }) => {
+        if (message && /error/i.test(message)) console.warn(message);
+    });
+
+    const base = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+
+    await ffmpeg.load({
+        coreURL: await toBlobURL(base + "/ffmpeg-core.js", "text/javascript"),
+        wasmURL: await toBlobURL(base + "/ffmpeg-core.wasm", "application/wasm")
+    });
+
+    ffmpegReady = true;
+}
+
+function canvasBlob(canvas) {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+            if (blob) resolve(blob);
+            else reject(new Error("Could not create overlay image."));
+        }, "image/png");
+    });
+}
+
+async function makeOverlayPNG(width, height) {
+    const overlay = document.createElement("canvas");
+    overlay.width = width;
+    overlay.height = height;
+
+    const c = overlay.getContext("2d");
+    c.clearRect(0, 0, width, height);
+
+    const text = $("overlayText").value;
+    const size = Math.max(12, Number($("fontSize").value) || 48);
+    const color = $("fontColor").value;
+
+    if (text.trim()) {
+        c.font = `bold ${size}px Arial`;
+        c.textAlign = "center";
+        c.textBaseline = "middle";
+
+        const lines = text.split("\n");
+        const lineHeight = size * 1.2;
+        let y;
+
+        if ($("textPosition").value === "top") {
+            y = lineHeight;
+        } else if ($("textPosition").value === "middle") {
+            y = height / 2 - (lines.length - 1) * lineHeight / 2;
+        } else {
+            y = height - lineHeight * lines.length;
+        }
+
+        c.lineWidth = Math.max(3, size / 12);
+        c.strokeStyle = "rgba(0,0,0,.85)";
+        c.fillStyle = color;
+
+        lines.forEach((line, index) => {
+            const yy = y + index * lineHeight;
+            c.strokeText(line, width / 2, yy);
+            c.fillText(line, width / 2, yy);
+        });
+    }
+
+    if (stickerImage && stickerImage.complete && stickerImage.naturalWidth) {
+        const stickerWidth = width * Number($("stickerSize").value) / 100;
+        const stickerHeight = stickerWidth *
+            stickerImage.naturalHeight / stickerImage.naturalWidth;
+
+        const pos = $("stickerPosition").value;
+        let x = width - stickerWidth - 30;
+        let y = height - stickerHeight - 30;
+
+        if (pos === "top-left") { x = 30; y = 30; }
+        if (pos === "top-right") { x = width - stickerWidth - 30; y = 30; }
+        if (pos === "center") {
+            x = (width - stickerWidth) / 2;
+            y = (height - stickerHeight) / 2;
+        }
+        if (pos === "bottom-left") { x = 30; y = height - stickerHeight - 30; }
+
+        c.drawImage(stickerImage, x, y, stickerWidth, stickerHeight);
+    }
+
+    return canvasBlob(overlay);
+}
+
+$("exportBtn").addEventListener("click", async () => {
+    if (!sourceFile || exporting) return;
+
+    const start = Math.max(0, Number($("trimStart").value) || 0);
+    const end = Number($("trimEnd").value);
+    const duration = end - start;
+    const speed = Number($("speed").value);
+    const cropPct = Number($("crop").value) / 100;
+
+    if (!Number.isFinite(end) || duration <= 0 || end > video.duration + 0.1) {
+        alert("Please set a valid trim start and end time.");
+        return;
+    }
+
+    exporting = true;
+    $("exportBtn").disabled = true;
+    $("progressOuter").style.display = "block";
+    $("progress").style.width = "0%";
+    $("downloadLink").style.display = "none";
+
+    try {
+        await loadEngine();
+
+        setStatus("Preparing your video...");
+        const inputName = "source.mp4";
+        const overlayName = "overlay.png";
+        const outputName = "edited-video.mp4";
+
+        await ffmpeg.writeFile(inputName, await fetchFile(sourceFile));
+
+        const overlayBlob = await makeOverlayPNG(
+            video.videoWidth || 1280,
+            video.videoHeight || 720
+        );
+        await ffmpeg.writeFile(overlayName, await fetchFile(overlayBlob));
+
+        const width = video.videoWidth || 1280;
+        const height = video.videoHeight || 720;
+
+        // Keep crop dimensions even so common MP4 encoders accept them.
+        const cropW = Math.max(2, Math.floor(width * (1 - 2 * cropPct) / 2) * 2);
+        const cropH = Math.max(2, Math.floor(height * (1 - 2 * cropPct) / 2) * 2);
+        const cropX = Math.floor((width - cropW) / 2);
+        const cropY = Math.floor((height - cropH) / 2);
+
+        const brightness = Number($("brightness").value);
+        const contrast = Number($("contrast").value);
+        const saturation = Number($("saturation").value);
+        const blur = Number($("blur").value);
+
+        const filters = [
+            `setpts=PTS/${speed}`,
+            `crop=${cropW}:${cropH}:${cropX}:${cropY}`,
+            `eq=brightness=${brightness}:contrast=${contrast}:saturation=${saturation}`
+        ];
+
+        if (blur > 0) filters.push(`boxblur=${blur}:1`);
+
+        const filterGraph =
+            `[0:v]${filters.join(",")}[base];` +
+            `[1:v]format=rgba[overlay];` +
+            `[base][overlay]overlay=0:0:shortest=1,format=yuv420p[v]`;
+
+        const args = [
+            "-ss", String(start),
+            "-i", inputName,
+            "-loop", "1",
+            "-i", overlayName,
+            "-t", String(duration / speed),
+            "-filter_complex", filterGraph,
+            "-map", "[v]",
+            "-map", "0:a?",
+            "-af", `atempo=${speed}`,
+            "-c:v", "libx264",
+            "-preset", "ultrafast",
+            "-crf", "23",
+            "-c:a", "aac",
+            "-movflags", "+faststart",
+            "-shortest",
+            outputName
+        ];
+
+        setStatus("Rendering your edited MP4. Keep this tab open...");
+        await ffmpeg.exec(args);
+
+        const data = await ffmpeg.readFile(outputName);
+        const blob = new Blob([data], { type: "video/mp4" });
+
+        if (lastExportURL) URL.revokeObjectURL(lastExportURL);
+        lastExportURL = URL.createObjectURL(blob);
+
+        $("downloadLink").href = lastExportURL;
+        $("downloadLink").style.display = "block";
+        $("downloadLink").textContent =
+            `⬇ Download edited MP4 (${(blob.size / 1024 / 1024).toFixed(1)} MB)`;
+
+        $("progress").style.width = "100%";
+        setStatus("Export complete. Click the download link to save your MP4.");
+
+    } catch (error) {
+        console.error(error);
+        setStatus("Export failed: " + (error.message || error) +
+            ". Try a shorter or smaller video, or refresh and retry.");
+        alert("The video could not be exported. Check the status message for details.");
+    } finally {
+        exporting = false;
+        $("exportBtn").disabled = !sourceFile;
+    }
+});
+
+syncSettings();
+</script>
+</body>
+</html>
