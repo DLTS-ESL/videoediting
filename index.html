@@ -1,852 +1,855 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Video Studio</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CaptureLab — Save Videos from Sources or Screen</title>
+  <meta name="description" content="Download direct video sources when available, or capture any video playing on your screen. 100% client-side. Does not bypass DRM." />
+  <meta name="theme-color" content="#0f1117" />
+  <meta name="color-scheme" content="dark" />
+  <meta property="og:title" content="CaptureLab — Save Videos" />
+  <meta property="og:description" content="Download video sources when possible, or record what’s on your screen. Fully private, no DRM bypass." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%235b8def'/%3E%3Cpolygon points='35,25 35,75 75,50' fill='white'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface-2: #242836;
+      --border: #2e3345;
+      --text: #e8eaef;
+      --text-muted: #9aa3b5;
+      --accent: #5b8def;
+      --accent-hover: #4a7de0;
+      --danger: #e85d5d;
+      --danger-hover: #d44c4c;
+      --success: #3ecf8e;
+      --warning: #f0b429;
+      --radius: 12px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.35);
+      --font: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
 
-<style>
-:root {
-    --bg: #10131b;
-    --panel: #191e29;
-    --panel2: #222938;
-    --text: #f4f6fb;
-    --muted: #9ca8bb;
-    --blue: #6888ff;
-    --border: #30394a;
-}
-* { box-sizing: border-box; }
-body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font: 14px Arial, sans-serif;
-}
-button, input, select, textarea { font: inherit; }
-button {
-    border: 0;
-    border-radius: 7px;
-    padding: 10px 13px;
-    cursor: pointer;
-    font-weight: 700;
-}
-button:disabled { opacity: .45; cursor: not-allowed; }
-.primary { background: var(--blue); color: white; }
-.secondary { background: var(--panel2); color: white; border: 1px solid var(--border); }
-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.brand { font-size: 20px; font-weight: 800; }
-.brand span { color: #91a6ff; }
-.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-#app {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 14px;
-    padding: 14px;
-    max-width: 1600px;
-    margin: auto;
-}
-.panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px;
-    min-width: 0;
-}
-.panel-title {
-    font-weight: 800;
-    font-size: 15px;
-    margin-bottom: 12px;
-}
-#previewWrap {
-    position: relative;
-    background: #05070b;
-    border-radius: 8px;
-    overflow: hidden;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-#video {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-#previewOverlay {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-}
-#emptyPreview {
-    position: absolute;
-    text-align: center;
-    color: var(--muted);
-    line-height: 1.8;
-    padding: 20px;
-}
-#emptyPreview strong { display: block; font-size: 20px; color: white; }
-.preview-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 12px 0;
-}
-#seek { width: 100%; }
-.time-label {
-    color: var(--muted);
-    font-size: 12px;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-}
-.section-label {
-    color: #a8b9ff;
-    font-weight: 800;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin: 18px 0 10px;
-}
-.trim-grid, .two-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-.field { margin-bottom: 12px; min-width: 0; }
-.field label {
-    display: flex;
-    justify-content: space-between;
-    gap: 6px;
-    margin-bottom: 7px;
-    color: #d6dceb;
-    font-size: 12px;
-}
-.field input[type="number"],
-.field input[type="text"],
-.field select,
-.field textarea {
-    width: 100%;
-    padding: 9px;
-    background: #10151f;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: white;
-}
-.field textarea { min-height: 75px; resize: vertical; }
-.field input[type="range"] { width: 100%; accent-color: var(--blue); }
-.field input[type="color"] {
-    width: 100%;
-    height: 35px;
-    background: transparent;
-    border: 0;
-}
-.upload-button {
-    display: block;
-    width: 100%;
-    background: var(--panel2);
-    color: white;
-    border: 1px dashed #56647c;
-    text-align: center;
-    margin-bottom: 10px;
-}
-input[type="file"] { display: none; }
-.note {
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--muted);
-}
-#timelinePanel { margin-top: 14px; }
-.timeline-track {
-    background: #10151f;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 10px;
-    margin-top: 8px;
-}
-.track-label { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
-.track-bar {
-    height: 24px;
-    border-radius: 4px;
-    background: linear-gradient(90deg,#465ab4,#718bff);
-}
-#status {
-    margin-top: 12px;
-    color: #b8c5ff;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-}
-#progressOuter {
-    display: none;
-    height: 7px;
-    margin-top: 9px;
-    background: #090c12;
-    border-radius: 8px;
-    overflow: hidden;
-}
-#progress {
-    width: 0;
-    height: 100%;
-    background: #7e9aff;
-}
-#downloadLink {
-    display: none;
-    margin-top: 12px;
-    color: #b6c8ff;
-    font-weight: bold;
-    overflow-wrap: anywhere;
-}
-.warning {
-    padding: 10px;
-    border-radius: 7px;
-    background: #332919;
-    color: #f5d6a1;
-    font-size: 12px;
-    line-height: 1.5;
-    margin-top: 12px;
-}
-@media(max-width: 950px) {
-    #app { grid-template-columns: 1fr; }
-}
-@media(max-width: 500px) {
-    header { padding: 12px; }
-    #app { padding: 8px; }
-    .panel { padding: 10px; }
-    .brand { font-size: 17px; }
-}
-</style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    header h1 span { color: var(--accent); }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    main {
+      flex: 1;
+      max-width: 820px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 560;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .tab:hover { background: var(--surface-2); color: var(--text); }
+    .tab.active {
+      background: rgba(91, 141, 239, 0.15);
+      color: var(--accent);
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    input[type="url"],
+    input[type="text"] {
+      flex: 1;
+      padding: 0.65rem 0.9rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.2);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.6rem 1.1rem;
+      font-size: 0.9rem;
+      font-weight: 560;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      color: #fff;
+      background: var(--accent);
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-danger { background: var(--danger); }
+    .btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
+
+    .btn-ghost {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--border); }
+
+    .btn-success { background: var(--success); color: #0a1f14; }
+    .btn-success:hover:not(:disabled) { filter: brightness(1.08); }
+
+    .preview-wrap {
+      position: relative;
+      background: #000;
+      border-radius: calc(var(--radius) - 4px);
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .preview-wrap video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .preview-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    .preview-placeholder svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.4;
+    }
+
+    .rec-indicator {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      z-index: 2;
+    }
+    .rec-indicator.active { display: flex; }
+
+    .rec-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    .timer {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      z-index: 2;
+      display: none;
+    }
+    .timer.active { display: block; }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      min-height: 1.4em;
+      margin-top: 0.75rem;
+    }
+    .status.error { color: var(--danger); }
+    .status.success { color: var(--success); }
+    .status.warning { color: var(--warning); }
+
+    .source-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .source-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .source-item .url {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text-muted);
+    }
+
+    .source-item .type {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--text-muted);
+    }
+
+    .info-box {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .info-box strong { color: var(--text); }
+    .info-box ul { margin: 0.4rem 0 0 1.1rem; }
+    .info-box li { margin-bottom: 0.3rem; }
+
+    .warning-box {
+      background: rgba(240, 180, 41, 0.08);
+      border: 1px solid rgba(240, 180, 41, 0.35);
+      border-radius: 8px;
+      padding: 0.9rem 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 0;
+    }
+    .warning-box strong { color: var(--warning); }
+
+    .download-section {
+      display: none;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .download-section.visible { display: flex; }
+
+    .download-meta {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 540px) {
+      main { padding: 1rem; }
+      header { padding: 1rem; }
+      .input-row { flex-direction: column; }
+      .btn { width: 100%; }
+    }
+  </style>
 </head>
-
 <body>
-<header>
-    <div class="brand">✦ AI <span>VIDEO STUDIO</span></div>
-    <div class="top-actions">
-        <button class="secondary" id="uploadBtn">＋ Import Video</button>
-        <button class="primary" id="exportBtn" disabled>Export MP4</button>
+  <header>
+    <h1>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      Capture<span>Lab</span>
+    </h1>
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      <span class="badge">No DRM bypass</span>
+      <span class="badge">100% client-side</span>
     </div>
-</header>
+  </header>
 
-<input id="videoFile" type="file" accept="video/*">
-<input id="stickerFile" type="file" accept="image/png,image/*">
+  <main>
+    <div class="warning-box">
+      <strong>What this tool can and cannot do</strong><br>
+      Browsers block most websites from letting other pages read their video sources (CORS) and protect many videos with DRM.
+      This tool <strong>cannot</strong> break DRM, decrypt protected streams, or freely extract videos from Netflix, YouTube, Disney+, etc.
+      It works best for direct public video file links or for recording what is visibly playing on your screen.
+    </div>
 
-<div id="app">
-    <main>
-        <section class="panel">
-            <div class="panel-title">Video Preview</div>
-            <div id="previewWrap">
-                <video id="video" playsinline></video>
-                <canvas id="previewOverlay"></canvas>
-                <div id="emptyPreview">
-                    <strong>Import a video to begin</strong>
-                    Your video stays in your browser.
-                </div>
-            </div>
+    <section class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="source">Direct Source Download</button>
+        <button class="tab" data-tab="detect">Detect on This Page</button>
+        <button class="tab" data-tab="screen">Screen Capture</button>
+      </div>
 
-            <div class="preview-controls">
-                <button class="secondary" id="playBtn" disabled>▶ Play</button>
-                <input id="seek" type="range" min="0" max="100" value="0" disabled>
-                <span class="time-label" id="currentTime">00:00 / 00:00</span>
-            </div>
+      <!-- Direct Source -->
+      <div class="panel active" id="panel-source">
+        <h2>Download by Video URL</h2>
+        <p>Paste a <strong>direct link</strong> to a video file (ending in .mp4, .webm, .mov, etc.). Many sites do not expose these links publicly.</p>
 
-            <div class="note">
-                Preview shows the color adjustments and overlays. Export renders
-                the trim, speed, crop, color adjustments, blur and overlays into an MP4.
-            </div>
-        </section>
-
-        <section class="panel" id="timelinePanel">
-            <div class="panel-title">Timeline</div>
-            <div class="timeline-track">
-                <div class="track-label">VIDEO CLIP</div>
-                <div class="track-bar"></div>
-            </div>
-            <div class="timeline-track">
-                <div class="track-label">TEXT / PNG OVERLAY</div>
-                <div class="note" id="overlayTrack">No overlay added</div>
-            </div>
-            <div class="timeline-track">
-                <div class="track-label">EXPORT RANGE</div>
-                <div class="note" id="rangeInfo">Import a video to see the duration.</div>
-            </div>
-        </section>
-
-        <section class="panel" style="margin-top:14px">
-            <div class="panel-title">Export Status</div>
-            <div class="note">
-                The first export may take a while because the video rendering engine
-                must download before it can run. Large videos use substantial memory.
-            </div>
-            <div id="status">Ready. Import a video to begin.</div>
-            <div id="progressOuter"><div id="progress"></div></div>
-            <a id="downloadLink" download="edited-video.mp4">Download edited MP4</a>
-        </section>
-    </main>
-
-    <aside class="panel">
-        <div class="panel-title">Editing Controls</div>
-
-        <div class="section-label">1. Trim & Speed</div>
-        <div class="trim-grid">
-            <div class="field">
-                <label for="trimStart">Start (seconds)</label>
-                <input id="trimStart" type="number" min="0" step="0.1" value="0">
-            </div>
-            <div class="field">
-                <label for="trimEnd">End (seconds)</label>
-                <input id="trimEnd" type="number" min="0" step="0.1" value="0">
-            </div>
-        </div>
-        <div class="field">
-            <label for="speed">Playback speed <span id="speedValue">1×</span></label>
-            <select id="speed">
-                <option value="0.25">0.25× — very slow</option>
-                <option value="0.5">0.5× — slow</option>
-                <option value="0.75">0.75×</option>
-                <option value="1" selected>1× — normal</option>
-                <option value="1.25">1.25×</option>
-                <option value="1.5">1.5×</option>
-                <option value="2">2× — fast</option>
-            </select>
+        <div class="input-row">
+          <input type="url" id="videoUrl" placeholder="https://example.com/video.mp4" autocomplete="off" />
+          <button class="btn" id="btnFetch">Check &amp; Download</button>
         </div>
 
-        <div class="section-label">2. Color & Effects</div>
-        <div class="field">
-            <label for="brightness">Brightness <span id="brightnessValue">0</span></label>
-            <input id="brightness" type="range" min="-0.5" max="0.5" step="0.01" value="0">
-        </div>
-        <div class="field">
-            <label for="contrast">Contrast <span id="contrastValue">1</span></label>
-            <input id="contrast" type="range" min="0.5" max="2" step="0.05" value="1">
-        </div>
-        <div class="field">
-            <label for="saturation">Saturation <span id="saturationValue">1</span></label>
-            <input id="saturation" type="range" min="0" max="2" step="0.05" value="1">
-        </div>
-        <div class="field">
-            <label for="blur">Blur <span id="blurValue">0</span></label>
-            <input id="blur" type="range" min="0" max="10" step="1" value="0">
-        </div>
-        <div class="field">
-            <label for="crop">Crop edges <span id="cropValue">0%</span></label>
-            <input id="crop" type="range" min="0" max="20" step="1" value="0">
-            <div class="note">Crops the same percentage from all four edges.</div>
+        <div class="preview-wrap" id="sourcePreviewWrap" style="display:none;">
+          <video id="sourcePreview" controls playsinline></video>
         </div>
 
-        <div class="section-label">3. Add Text</div>
-        <div class="field">
-            <label for="overlayText">Text overlay</label>
-            <textarea id="overlayText" placeholder="Type a title or caption..."></textarea>
-        </div>
-        <div class="two-cols">
-            <div class="field">
-                <label for="fontSize">Font size (px)</label>
-                <input id="fontSize" type="number" min="12" max="160" value="48">
-            </div>
-            <div class="field">
-                <label for="fontColor">Text color</label>
-                <input id="fontColor" type="color" value="#ffffff">
-            </div>
-        </div>
-        <div class="field">
-            <label for="textPosition">Text position</label>
-            <select id="textPosition">
-                <option value="top">Top</option>
-                <option value="middle">Middle</option>
-                <option value="bottom" selected>Bottom</option>
-            </select>
+        <div class="controls" id="sourceActions" style="display:none;">
+          <button class="btn btn-success" id="btnDownloadSource">Download Video</button>
+          <a class="btn btn-ghost" id="btnOpenSource" target="_blank" rel="noopener">Open in new tab</a>
         </div>
 
-        <div class="section-label">4. Add PNG Sticker / Image</div>
-        <button class="upload-button" id="stickerBtn">＋ Upload PNG or Image</button>
-        <div class="field">
-            <label for="stickerSize">Sticker size <span id="stickerSizeValue">20%</span></label>
-            <input id="stickerSize" type="range" min="5" max="60" value="20">
+        <p class="status" id="sourceStatus"></p>
+      </div>
+
+      <!-- Detect -->
+      <div class="panel" id="panel-detect">
+        <h2>Find Videos on This Page</h2>
+        <p>Scans the current page for <code>&lt;video&gt;</code> elements and common media URLs. Only works for videos that this page can access (same-origin or CORS-enabled).</p>
+
+        <div class="controls">
+          <button class="btn" id="btnDetect">Scan This Page</button>
         </div>
-        <div class="field">
-            <label for="stickerPosition">Sticker position</label>
-            <select id="stickerPosition">
-                <option value="top-left">Top left</option>
-                <option value="top-right">Top right</option>
-                <option value="center">Center</option>
-                <option value="bottom-left">Bottom left</option>
-                <option value="bottom-right" selected>Bottom right</option>
-            </select>
+
+        <ul class="source-list" id="sourceList"></ul>
+        <p class="status" id="detectStatus"></p>
+
+        <div class="info-box" style="margin-top:1rem;">
+          <strong>Tip:</strong> Cross-site videos are almost always blocked by the browser. This scan only finds media that the current page is allowed to see.
         </div>
-        <button class="secondary" id="removeSticker" style="width:100%">Remove Sticker</button>
+      </div>
 
-        <div class="warning">
-            Stage 1 note: automatic AI subtitles, subtitle timing, audio-track mixing,
-            green-screen replacement and multi-clip editing are planned for later stages.
-            This version exports the edits listed above.
+      <!-- Screen Capture -->
+      <div class="panel" id="panel-screen">
+        <h2>Record What’s on Your Screen</h2>
+        <p>Use this when you cannot get a direct source. Share the browser tab or window that is playing the video. Prefer sharing a single tab for best quality and (on Chrome/Edge) optional audio.</p>
+
+        <div class="preview-wrap">
+          <video id="screenPreview" playsinline muted></video>
+          <div class="preview-placeholder" id="screenPlaceholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>No screen share active</span>
+          </div>
+          <div class="rec-indicator" id="recIndicator">
+            <span class="rec-dot"></span> REC
+          </div>
+          <div class="timer" id="timer">00:00</div>
         </div>
-    </aside>
-</div>
 
-<script type="module">
-import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js";
-import { fetchFile, toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js";
+        <div class="controls">
+          <button class="btn" id="btnStartShare">Share Screen / Tab</button>
+          <button class="btn btn-ghost" id="btnStopShare" disabled>Stop Share</button>
+          <button class="btn btn-danger" id="btnStartRec" disabled>Start Recording</button>
+          <button class="btn btn-ghost" id="btnStopRec" disabled>Stop Recording</button>
+        </div>
 
-const $ = id => document.getElementById(id);
-const video = $("video");
-const canvas = $("previewOverlay");
-const ctx = canvas.getContext("2d");
+        <p class="status" id="screenStatus"></p>
 
-let sourceFile = null;
-let sourceURL = null;
-let stickerURL = null;
-let stickerImage = null;
-let ffmpeg = null;
-let ffmpegReady = false;
-let exporting = false;
-let lastExportURL = null;
+        <div class="download-section" id="downloadSection">
+          <p class="download-meta" id="downloadMeta"></p>
+          <div class="controls">
+            <button class="btn btn-success" id="btnDownloadRec">Download Recording</button>
+            <button class="btn btn-ghost" id="btnDiscard">Discard</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-const settings = [
-    ["brightness", "brightnessValue", v => Number(v).toFixed(2)],
-    ["contrast", "contrastValue", v => Number(v).toFixed(2)],
-    ["saturation", "saturationValue", v => Number(v).toFixed(2)],
-    ["blur", "blurValue", v => v],
-    ["crop", "cropValue", v => v + "%"],
-    ["speed", "speedValue", v => v + "×"],
-    ["stickerSize", "stickerSizeValue", v => v + "%"]
-];
+    <section class="card">
+      <h2>Realistic Limitations</h2>
+      <div class="info-box">
+        <ul>
+          <li><strong>DRM-protected content</strong> (Netflix, Disney+, many streaming platforms, some YouTube) cannot be downloaded or captured in usable form by any ordinary website. This is intentional browser and platform security.</li>
+          <li><strong>Cross-origin videos</strong> are blocked by CORS. A website cannot freely read video sources belonging to another domain.</li>
+          <li><strong>Blob / MediaSource streams</strong> (common on modern players) do not expose a simple downloadable file URL.</li>
+          <li><strong>Screen recording</strong> captures pixels only — quality depends on resolution, frame rate, and whether the tab is visible. It is not a perfect source download.</li>
+          <li>Respect copyright and the terms of service of the sites you visit. This tool is intended for videos you have the right to save (your own content, public domain, Creative Commons, etc.).</li>
+        </ul>
+      </div>
+    </section>
+  </main>
 
-function setStatus(message) {
-    $("status").textContent = message;
-}
+  <footer>
+    <strong>CaptureLab</strong> · Client-side only · Does not bypass DRM or access restrictions<br>
+    Prefer official download options or content you own · 
+    <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder" target="_blank" rel="noopener">MediaRecorder</a> ·
+    <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS" target="_blank" rel="noopener">CORS explained</a>
+  </footer>
 
-function fmt(seconds) {
-    if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
-}
+  <script>
+    (() => {
+      "use strict";
 
-function updateRangeInfo() {
-    const start = Number($("trimStart").value || 0);
-    const end = Number($("trimEnd").value || video.duration || 0);
-    const speed = Number($("speed").value);
-    const duration = Math.max(0, end - start);
+      // Tabs
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+          document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+          tab.classList.add("active");
+          document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+        });
+      });
 
-    $("rangeInfo").textContent =
-        `${fmt(start)} to ${fmt(end)} · ${fmt(duration / speed)} estimated output duration`;
-}
+      function setStatus(el, msg, type = "") {
+        el.textContent = msg;
+        el.className = "status" + (type ? " " + type : "");
+      }
 
-function syncSettings() {
-    for (const [inputId, outputId, formatter] of settings) {
-        $(outputId).textContent = formatter($(inputId).value);
-    }
-    updateRangeInfo();
-    drawPreviewOverlay();
-    updateVideoFilters();
-}
+      function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / 1048576).toFixed(2) + " MB";
+      }
 
-function updateVideoFilters() {
-    const brightness = Number($("brightness").value);
-    const contrast = Number($("contrast").value);
-    const saturation = Number($("saturation").value);
-    const blur = Number($("blur").value);
-    const crop = Number($("crop").value);
+      function formatTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        return String(m).padStart(2,"0") + ":" + String(s % 60).padStart(2,"0");
+      }
 
-    video.style.filter =
-        `brightness(${1 + brightness}) contrast(${contrast}) saturate(${saturation}) blur(${blur / 2}px)`;
+      function pickMimeType() {
+        const candidates = [
+          "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+          "video/mp4",
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm"
+        ];
+        for (const t of candidates) {
+          if (MediaRecorder.isTypeSupported(t)) return t;
+        }
+        return "";
+      }
 
-    // Crop is applied by the actual export filter.
-    // Keep the preview image scaled inside the preview monitor.
-    video.style.clipPath = crop > 0
-        ? `inset(${crop}% ${crop}% ${crop}% ${crop}%)`
-        : "none";
-}
+      // Direct Source Download
+      const videoUrlInput    = document.getElementById("videoUrl");
+      const btnFetch         = document.getElementById("btnFetch");
+      const sourcePreview    = document.getElementById("sourcePreview");
+      const sourcePreviewWrap= document.getElementById("sourcePreviewWrap");
+      const sourceActions    = document.getElementById("sourceActions");
+      const btnDownloadSource= document.getElementById("btnDownloadSource");
+      const btnOpenSource    = document.getElementById("btnOpenSource");
+      const sourceStatus     = document.getElementById("sourceStatus");
 
-function drawPreviewOverlay() {
-    const rect = video.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+      let currentSourceBlob = null;
+      let currentSourceUrl  = null;
 
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
-
-    const text = $("overlayText").value;
-    const fontSize = Math.max(12, Number($("fontSize").value) || 48);
-    const color = $("fontColor").value;
-
-    if (text.trim()) {
-        ctx.font = `bold ${fontSize * rect.width / Math.max(video.videoWidth, 1)}px Arial`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        const lines = text.split("\n");
-        const lineHeight = fontSize * rect.width / Math.max(video.videoWidth, 1) * 1.2;
-        let y;
-
-        if ($("textPosition").value === "top") {
-            y = lineHeight;
-        } else if ($("textPosition").value === "middle") {
-            y = rect.height / 2 - (lines.length - 1) * lineHeight / 2;
-        } else {
-            y = rect.height - lineHeight * lines.length;
+      btnFetch.addEventListener("click", async () => {
+        const url = videoUrlInput.value.trim();
+        if (!url) {
+          setStatus(sourceStatus, "Please paste a video URL.", "error");
+          return;
         }
 
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "rgba(0,0,0,.8)";
-        ctx.fillStyle = color;
+        sourcePreviewWrap.style.display = "none";
+        sourceActions.style.display = "none";
+        currentSourceBlob = null;
+        currentSourceUrl = null;
+        sourcePreview.removeAttribute("src");
+        btnDownloadSource.disabled = false;
 
-        lines.forEach((line, index) => {
-            const yy = y + index * lineHeight;
-            ctx.strokeText(line, rect.width / 2, yy);
-            ctx.fillText(line, rect.width / 2, yy);
-        });
-    }
+        setStatus(sourceStatus, "Trying to fetch video…");
 
-    if (stickerImage && stickerImage.complete) {
-        const width = rect.width * Number($("stickerSize").value) / 100;
-        const height = width * stickerImage.naturalHeight / stickerImage.naturalWidth;
-        const pos = $("stickerPosition").value;
-        let x = rect.width - width - 15;
-        let y = rect.height - height - 15;
-
-        if (pos === "top-left") { x = 15; y = 15; }
-        if (pos === "top-right") { x = rect.width - width - 15; y = 15; }
-        if (pos === "center") { x = (rect.width - width) / 2; y = (rect.height - height) / 2; }
-        if (pos === "bottom-left") { x = 15; y = rect.height - height - 15; }
-
-        ctx.drawImage(stickerImage, x, y, width, height);
-    }
-}
-
-function updateTimeline() {
-    $("currentTime").textContent = `${fmt(video.currentTime)} / ${fmt(video.duration)}`;
-    if (video.duration) {
-        $("seek").value = video.currentTime / video.duration * 100;
-    }
-}
-
-$("uploadBtn").addEventListener("click", () => $("videoFile").click());
-
-$("videoFile").addEventListener("change", event => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (sourceURL) URL.revokeObjectURL(sourceURL);
-    sourceFile = file;
-    sourceURL = URL.createObjectURL(file);
-    video.src = sourceURL;
-    video.load();
-
-    $("emptyPreview").style.display = "none";
-    $("exportBtn").disabled = false;
-    $("downloadLink").style.display = "none";
-    setStatus(`Loaded: ${file.name}`);
-});
-
-video.addEventListener("loadedmetadata", () => {
-    $("trimStart").value = 0;
-    $("trimEnd").value = video.duration.toFixed(2);
-    $("seek").disabled = false;
-    $("playBtn").disabled = false;
-    updateTimeline();
-    syncSettings();
-});
-
-video.addEventListener("timeupdate", updateTimeline);
-video.addEventListener("resize", drawPreviewOverlay);
-window.addEventListener("resize", drawPreviewOverlay);
-
-$("playBtn").addEventListener("click", async () => {
-    if (video.paused) {
         try {
-            video.playbackRate = Number($("speed").value);
-            await video.play();
-            $("playBtn").textContent = "❚❚ Pause";
-        } catch (error) {
-            setStatus("Could not play video: " + error.message);
+          const response = await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            credentials: "omit"
+          });
+
+          if (!response.ok) throw new Error("HTTP " + response.status);
+
+          const contentType = response.headers.get("content-type") || "";
+          const isVideo = contentType.startsWith("video/") ||
+                          /\.(mp4|webm|mov|mkv|m4v|ogv)(\?|$)/i.test(url);
+
+          if (!isVideo && !contentType.includes("octet-stream")) {
+            setStatus(sourceStatus, "Response does not look like a video (Content-Type: " + (contentType || "unknown") + "). Trying preview anyway…", "warning");
+          }
+
+          const blob = await response.blob();
+          currentSourceBlob = blob;
+          currentSourceUrl = url;
+
+          const objectUrl = URL.createObjectURL(blob);
+          sourcePreview.src = objectUrl;
+          sourcePreviewWrap.style.display = "block";
+          sourceActions.style.display = "flex";
+          btnOpenSource.href = url;
+
+          setStatus(sourceStatus, "Ready — " + formatBytes(blob.size) + ". You can preview and download.", "success");
+        } catch (err) {
+          console.warn(err);
+          sourceActions.style.display = "flex";
+          btnOpenSource.href = url;
+          btnDownloadSource.disabled = true;
+          setStatus(sourceStatus,
+            "Could not fetch the file (likely blocked by CORS or the server). " +
+            "You can try opening the link in a new tab. Many video hosts intentionally prevent cross-site downloads.",
+            "error"
+          );
         }
-    } else {
-        video.pause();
-        $("playBtn").textContent = "▶ Play";
-    }
-});
+      });
 
-video.addEventListener("pause", () => $("playBtn").textContent = "▶ Play");
-video.addEventListener("play", () => $("playBtn").textContent = "❚❚ Pause");
+      btnDownloadSource.addEventListener("click", () => {
+        if (!currentSourceBlob) return;
+        const a = document.createElement("a");
+        const match = currentSourceUrl.match(/\.(mp4|webm|mov|mkv|m4v|ogv)/i);
+        const ext = match ? match[1] : "mp4";
+        a.href = URL.createObjectURL(currentSourceBlob);
+        a.download = "video-" + Date.now() + "." + ext;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
 
-$("seek").addEventListener("input", () => {
-    if (video.duration) {
-        video.currentTime = video.duration * Number($("seek").value) / 100;
-    }
-});
+      // Detect videos on this page
+      const btnDetect    = document.getElementById("btnDetect");
+      const sourceList   = document.getElementById("sourceList");
+      const detectStatus = document.getElementById("detectStatus");
 
-for (const id of [
-    "brightness", "contrast", "saturation", "blur", "crop", "speed",
-    "stickerSize", "fontSize", "fontColor", "textPosition",
-    "stickerPosition", "overlayText", "trimStart", "trimEnd"
-]) {
-    $(id).addEventListener("input", () => {
-        if (id === "speed") video.playbackRate = Number($("speed").value);
-        syncSettings();
-    });
-    $(id).addEventListener("change", syncSettings);
-}
+      btnDetect.addEventListener("click", () => {
+        sourceList.innerHTML = "";
+        const found = new Set();
 
-$("stickerBtn").addEventListener("click", () => $("stickerFile").click());
-
-$("stickerFile").addEventListener("change", event => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (stickerURL) URL.revokeObjectURL(stickerURL);
-    stickerURL = URL.createObjectURL(file);
-    stickerImage = new Image();
-
-    stickerImage.onload = () => {
-        $("overlayTrack").textContent = "Sticker image added";
-        drawPreviewOverlay();
-    };
-    stickerImage.src = stickerURL;
-});
-
-$("removeSticker").addEventListener("click", () => {
-    if (stickerURL) URL.revokeObjectURL(stickerURL);
-    stickerURL = null;
-    stickerImage = null;
-    $("stickerFile").value = "";
-    $("overlayTrack").textContent = $("overlayText").value.trim()
-        ? "Text overlay added"
-        : "No overlay added";
-    drawPreviewOverlay();
-});
-
-$("overlayText").addEventListener("input", () => {
-    $("overlayTrack").textContent =
-        $("overlayText").value.trim() || stickerImage
-        ? "Text / sticker overlay added"
-        : "No overlay added";
-});
-
-async function loadEngine() {
-    if (ffmpegReady) return;
-
-    setStatus("Loading video rendering engine. This may take a minute...");
-    ffmpeg = new FFmpeg();
-
-    ffmpeg.on("progress", ({ progress }) => {
-        const pct = Math.max(0, Math.min(100, Math.round(progress * 100)));
-        $("progressOuter").style.display = "block";
-        $("progress").style.width = pct + "%";
-        setStatus("Rendering MP4... " + pct + "%");
-    });
-
-    ffmpeg.on("log", ({ message }) => {
-        if (message && /error/i.test(message)) console.warn(message);
-    });
-
-    const base = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-
-    await ffmpeg.load({
-        coreURL: await toBlobURL(base + "/ffmpeg-core.js", "text/javascript"),
-        wasmURL: await toBlobURL(base + "/ffmpeg-core.wasm", "application/wasm")
-    });
-
-    ffmpegReady = true;
-}
-
-function canvasBlob(canvas) {
-    return new Promise((resolve, reject) => {
-        canvas.toBlob(blob => {
-            if (blob) resolve(blob);
-            else reject(new Error("Could not create overlay image."));
-        }, "image/png");
-    });
-}
-
-async function makeOverlayPNG(width, height) {
-    const overlay = document.createElement("canvas");
-    overlay.width = width;
-    overlay.height = height;
-
-    const c = overlay.getContext("2d");
-    c.clearRect(0, 0, width, height);
-
-    const text = $("overlayText").value;
-    const size = Math.max(12, Number($("fontSize").value) || 48);
-    const color = $("fontColor").value;
-
-    if (text.trim()) {
-        c.font = `bold ${size}px Arial`;
-        c.textAlign = "center";
-        c.textBaseline = "middle";
-
-        const lines = text.split("\n");
-        const lineHeight = size * 1.2;
-        let y;
-
-        if ($("textPosition").value === "top") {
-            y = lineHeight;
-        } else if ($("textPosition").value === "middle") {
-            y = height / 2 - (lines.length - 1) * lineHeight / 2;
-        } else {
-            y = height - lineHeight * lines.length;
-        }
-
-        c.lineWidth = Math.max(3, size / 12);
-        c.strokeStyle = "rgba(0,0,0,.85)";
-        c.fillStyle = color;
-
-        lines.forEach((line, index) => {
-            const yy = y + index * lineHeight;
-            c.strokeText(line, width / 2, yy);
-            c.fillText(line, width / 2, yy);
+        document.querySelectorAll("video").forEach(video => {
+          if (video.src) found.add(video.src);
+          video.querySelectorAll("source").forEach(s => {
+            if (s.src) found.add(s.src);
+          });
+          if (video.currentSrc) found.add(video.currentSrc);
         });
-    }
 
-    if (stickerImage && stickerImage.complete && stickerImage.naturalWidth) {
-        const stickerWidth = width * Number($("stickerSize").value) / 100;
-        const stickerHeight = stickerWidth *
-            stickerImage.naturalHeight / stickerImage.naturalWidth;
+        document.querySelectorAll("a[href], source[src], [data-src]").forEach(el => {
+          const href = el.href || el.src || el.dataset.src || "";
+          if (/\.(mp4|webm|mov|mkv|m4v|ogv)(\?|$)/i.test(href)) {
+            found.add(href);
+          }
+        });
 
-        const pos = $("stickerPosition").value;
-        let x = width - stickerWidth - 30;
-        let y = height - stickerHeight - 30;
-
-        if (pos === "top-left") { x = 30; y = 30; }
-        if (pos === "top-right") { x = width - stickerWidth - 30; y = 30; }
-        if (pos === "center") {
-            x = (width - stickerWidth) / 2;
-            y = (height - stickerHeight) / 2;
+        if (found.size === 0) {
+          setStatus(detectStatus, "No accessible video sources found on this page. Most websites keep media on other domains or behind DRM.", "warning");
+          return;
         }
-        if (pos === "bottom-left") { x = 30; y = height - stickerHeight - 30; }
 
-        c.drawImage(stickerImage, x, y, stickerWidth, stickerHeight);
-    }
+        setStatus(detectStatus, "Found " + found.size + " possible source(s).", "success");
 
-    return canvasBlob(overlay);
-}
+        found.forEach(url => {
+          const li = document.createElement("li");
+          li.className = "source-item";
+          const match = url.match(/\.(mp4|webm|mov|mkv|m4v|ogv)/i);
+          const type = match ? match[1].toUpperCase() : "MEDIA";
+          li.innerHTML = '<span class="type">' + type + '</span>' +
+            '<span class="url" title="' + url + '">' + url + '</span>' +
+            '<button class="btn btn-ghost" style="padding:0.35rem 0.7rem;font-size:0.8rem;">Use</button>';
+          li.querySelector("button").addEventListener("click", () => {
+            videoUrlInput.value = url;
+            document.querySelector('.tab[data-tab="source"]').click();
+            btnFetch.click();
+          });
+          sourceList.appendChild(li);
+        });
+      });
 
-$("exportBtn").addEventListener("click", async () => {
-    if (!sourceFile || exporting) return;
+      // Screen Capture
+      const screenPreview    = document.getElementById("screenPreview");
+      const screenPlaceholder= document.getElementById("screenPlaceholder");
+      const recIndicator     = document.getElementById("recIndicator");
+      const timerEl          = document.getElementById("timer");
+      const btnStartShare    = document.getElementById("btnStartShare");
+      const btnStopShare     = document.getElementById("btnStopShare");
+      const btnStartRec      = document.getElementById("btnStartRec");
+      const btnStopRec       = document.getElementById("btnStopRec");
+      const screenStatus     = document.getElementById("screenStatus");
+      const downloadSection  = document.getElementById("downloadSection");
+      const downloadMeta     = document.getElementById("downloadMeta");
+      const btnDownloadRec   = document.getElementById("btnDownloadRec");
+      const btnDiscard       = document.getElementById("btnDiscard");
 
-    const start = Math.max(0, Number($("trimStart").value) || 0);
-    const end = Number($("trimEnd").value);
-    const duration = end - start;
-    const speed = Number($("speed").value);
-    const cropPct = Number($("crop").value) / 100;
+      let screenStream   = null;
+      let mediaRecorder  = null;
+      let recordedChunks = [];
+      let recordedBlob   = null;
+      let isRecording    = false;
+      let startTime      = 0;
+      let timerInterval  = null;
+      const preferredMime = pickMimeType();
 
-    if (!Number.isFinite(end) || duration <= 0 || end > video.duration + 0.1) {
-        alert("Please set a valid trim start and end time.");
-        return;
-    }
+      function stopTracks(stream) {
+        if (stream) stream.getTracks().forEach(t => t.stop());
+      }
 
-    exporting = true;
-    $("exportBtn").disabled = true;
-    $("progressOuter").style.display = "block";
-    $("progress").style.width = "0%";
-    $("downloadLink").style.display = "none";
+      function resetRecordingUI() {
+        isRecording = false;
+        recIndicator.classList.remove("active");
+        timerEl.classList.remove("active");
+        timerEl.textContent = "00:00";
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        btnStartRec.disabled = !screenStream;
+        btnStopRec.disabled = true;
+      }
 
-    try {
-        await loadEngine();
+      btnStartShare.addEventListener("click", async () => {
+        try {
+          setStatus(screenStatus, "Waiting for you to choose what to share…");
+          screenStream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              frameRate: { ideal: 30 },
+              displaySurface: "browser"
+            },
+            audio: true,
+            preferCurrentTab: true
+          });
 
-        setStatus("Preparing your video...");
-        const inputName = "source.mp4";
-        const overlayName = "overlay.png";
-        const outputName = "edited-video.mp4";
+          screenPreview.srcObject = screenStream;
+          screenPreview.play().catch(() => {});
+          screenPlaceholder.style.display = "none";
 
-        await ffmpeg.writeFile(inputName, await fetchFile(sourceFile));
+          screenStream.getVideoTracks()[0].addEventListener("ended", () => {
+            stopShare();
+            setStatus(screenStatus, "Screen share ended.", "warning");
+          });
 
-        const overlayBlob = await makeOverlayPNG(
-            video.videoWidth || 1280,
-            video.videoHeight || 720
-        );
-        await ffmpeg.writeFile(overlayName, await fetchFile(overlayBlob));
+          btnStartShare.disabled = true;
+          btnStopShare.disabled = false;
+          btnStartRec.disabled = false;
+          setStatus(screenStatus, "Screen share active. You can start recording.", "success");
+        } catch (err) {
+          console.error(err);
+          let msg = "Could not start screen share.";
+          if (err.name === "NotAllowedError") msg = "Permission denied or cancelled.";
+          setStatus(screenStatus, msg, "error");
+        }
+      });
 
-        const width = video.videoWidth || 1280;
-        const height = video.videoHeight || 720;
+      function stopShare() {
+        if (isRecording && mediaRecorder) mediaRecorder.stop();
+        stopTracks(screenStream);
+        screenStream = null;
+        screenPreview.srcObject = null;
+        screenPlaceholder.style.display = "flex";
+        btnStartShare.disabled = false;
+        btnStopShare.disabled = true;
+        resetRecordingUI();
+      }
 
-        // Keep crop dimensions even so common MP4 encoders accept them.
-        const cropW = Math.max(2, Math.floor(width * (1 - 2 * cropPct) / 2) * 2);
-        const cropH = Math.max(2, Math.floor(height * (1 - 2 * cropPct) / 2) * 2);
-        const cropX = Math.floor((width - cropW) / 2);
-        const cropY = Math.floor((height - cropH) / 2);
+      btnStopShare.addEventListener("click", () => {
+        stopShare();
+        setStatus(screenStatus, "Share stopped.");
+      });
 
-        const brightness = Number($("brightness").value);
-        const contrast = Number($("contrast").value);
-        const saturation = Number($("saturation").value);
-        const blur = Number($("blur").value);
+      btnStartRec.addEventListener("click", () => {
+        if (!screenStream || isRecording) return;
 
-        const filters = [
-            `setpts=PTS/${speed}`,
-            `crop=${cropW}:${cropH}:${cropX}:${cropY}`,
-            `eq=brightness=${brightness}:contrast=${contrast}:saturation=${saturation}`
-        ];
+        recordedChunks = [];
+        recordedBlob = null;
+        downloadSection.classList.remove("visible");
 
-        if (blur > 0) filters.push(`boxblur=${blur}:1`);
+        const options = {
+          videoBitsPerSecond: 5000000,
+          audioBitsPerSecond: 128000
+        };
+        if (preferredMime) options.mimeType = preferredMime;
 
-        const filterGraph =
-            `[0:v]${filters.join(",")}[base];` +
-            `[1:v]format=rgba[overlay];` +
-            `[base][overlay]overlay=0:0:shortest=1,format=yuv420p[v]`;
+        try {
+          mediaRecorder = new MediaRecorder(screenStream, options);
+        } catch {
+          mediaRecorder = new MediaRecorder(screenStream);
+        }
 
-        const args = [
-            "-ss", String(start),
-            "-i", inputName,
-            "-loop", "1",
-            "-i", overlayName,
-            "-t", String(duration / speed),
-            "-filter_complex", filterGraph,
-            "-map", "[v]",
-            "-map", "0:a?",
-            "-af", `atempo=${speed}`,
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-crf", "23",
-            "-c:a", "aac",
-            "-movflags", "+faststart",
-            "-shortest",
-            outputName
-        ];
+        mediaRecorder.ondataavailable = e => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
 
-        setStatus("Rendering your edited MP4. Keep this tab open...");
-        await ffmpeg.exec(args);
+        mediaRecorder.onstop = () => {
+          const mime = mediaRecorder.mimeType || preferredMime || "video/webm";
+          recordedBlob = new Blob(recordedChunks, { type: mime });
+          downloadMeta.textContent = "Size: " + formatBytes(recordedBlob.size) + " · Format: " + mime;
+          downloadSection.classList.add("visible");
+          setStatus(screenStatus, "Recording finished.", "success");
+          resetRecordingUI();
+        };
 
-        const data = await ffmpeg.readFile(outputName);
-        const blob = new Blob([data], { type: "video/mp4" });
+        mediaRecorder.start(1000);
+        isRecording = true;
+        startTime = Date.now();
+        recIndicator.classList.add("active");
+        timerEl.classList.add("active");
+        timerInterval = setInterval(() => {
+          timerEl.textContent = formatTime(Date.now() - startTime);
+        }, 250);
 
-        if (lastExportURL) URL.revokeObjectURL(lastExportURL);
-        lastExportURL = URL.createObjectURL(blob);
+        btnStartRec.disabled = true;
+        btnStopRec.disabled = false;
+        setStatus(screenStatus, "Recording…");
+      });
 
-        $("downloadLink").href = lastExportURL;
-        $("downloadLink").style.display = "block";
-        $("downloadLink").textContent =
-            `⬇ Download edited MP4 (${(blob.size / 1024 / 1024).toFixed(1)} MB)`;
+      btnStopRec.addEventListener("click", () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+      });
 
-        $("progress").style.width = "100%";
-        setStatus("Export complete. Click the download link to save your MP4.");
+      btnDownloadRec.addEventListener("click", () => {
+        if (!recordedBlob) return;
+        const isMp4 = recordedBlob.type.includes("mp4");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(recordedBlob);
+        a.download = "screen-capture-" + Date.now() + (isMp4 ? ".mp4" : ".webm");
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
 
-    } catch (error) {
-        console.error(error);
-        setStatus("Export failed: " + (error.message || error) +
-            ". Try a shorter or smaller video, or refresh and retry.");
-        alert("The video could not be exported. Check the status message for details.");
-    } finally {
-        exporting = false;
-        $("exportBtn").disabled = !sourceFile;
-    }
-});
+      btnDiscard.addEventListener("click", () => {
+        recordedBlob = null;
+        recordedChunks = [];
+        downloadSection.classList.remove("visible");
+        setStatus(screenStatus, "Recording discarded.");
+      });
 
-syncSettings();
-</script>
+      if (!navigator.mediaDevices || !window.MediaRecorder) {
+        setStatus(screenStatus, "Screen capture is not supported in this browser.", "error");
+        btnStartShare.disabled = true;
+      }
+    })();
+  </script>
 </body>
 </html>
